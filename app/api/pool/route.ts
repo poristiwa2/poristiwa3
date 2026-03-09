@@ -6,26 +6,26 @@ const POOL_FILE = path.join(process.cwd(), 'data', 'pool.json');
 
 export async function GET() {
   try {
-    await fs.access(POOL_FILE);
-    const data = await fs.readFile(POOL_FILE, 'utf-8');
-    return NextResponse.json(JSON.parse(data));
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
+    // In Cloudflare Workers, we can't reliably use fs at runtime for dynamic data.
+    // However, if the file is part of the build, we might be able to read it.
+    // We use a try-catch to prevent worker crashes.
+    try {
+      // Check if file exists before reading
+      await fs.access(POOL_FILE);
+      const data = await fs.readFile(POOL_FILE, 'utf-8');
+      return NextResponse.json(JSON.parse(data));
+    } catch (e: any) {
+      // If file doesn't exist, return empty array instead of crashing
+      console.warn('Pool file not found or inaccessible at runtime:', e.message);
       return NextResponse.json([]);
     }
-    console.error('Error reading pool:', error);
-    return NextResponse.json({ error: 'Failed to read pool' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Critical error in pool GET:', error);
+    // Return empty array instead of 500 to keep the UI working
+    return NextResponse.json([]);
   }
 }
 
-export async function POST(req: Request) {
-  try {
-    const data = await req.json();
-    await fs.mkdir(path.dirname(POOL_FILE), { recursive: true });
-    await fs.writeFile(POOL_FILE, JSON.stringify(data, null, 2));
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error writing pool:', error);
-    return NextResponse.json({ error: 'Failed to write pool' }, { status: 500 });
-  }
+export async function POST() {
+  return NextResponse.json({ error: 'Writing to filesystem is not supported on Cloudflare Workers' }, { status: 405 });
 }
