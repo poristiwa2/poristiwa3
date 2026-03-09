@@ -12,6 +12,7 @@ const config: OpenNextConfig = {
       queue: "dummy",
     },
   },
+  buildCommand: "next build",
   edgeExternals: ["node:crypto"],
   middleware: {
     external: true,
